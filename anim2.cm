@@ -1,0 +1,362 @@
+/** Configura CET Source Copyright Notice (CETSC)
+
+   This file contains Configura CM source code and is part of the
+   Configura CET Development Platform (CETDEV). Configura CM
+   is a programming language created by Configura Sverige AB.
+   Configura, Configura CET and Configura CM are trademarks of
+   Configura Sverige AB. Configura Sverige AB owns Configura CET,
+   Configura CM, and CETDEV.
+
+   Copyright (C) 2004 Configura Sverige AB, All rights reserved.
+
+   You can modify this source file under the terms of the Configura CET
+   Source Licence Agreement (CETSL) as published by Configura Sverige AB.
+
+   Configura Sverige AB has exclusive rights to all changes, modifications,
+   and corrections of this source file. Configura Sverige AB has exclusive
+   rights to any new source file containing material from this source file.
+   A new source file based on this source file or containing material from
+   this source file has to include this Configura CET Source Copyright Notice
+   in its full content. All changes, modifications, and corrections mentioned
+   above shall be reported to Configura Sverige AB within One Month from
+   the date that the modification occurred.
+
+   Configura CM is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+   See the CETSL for more details.
+
+   You should have received a copy of the CETSL along with the CETDEV.
+   If not, write to Configura Sverige AB, Box 306, SE-581 02 Linköping, Sweden.
+   Tel +46 13377800, Fax +46 13377855,
+   Email: info@configura.com, www.configura.com
+
+   END OF CETSC
+*/
+package profile.fparra.extensionfp;
+
+
+public class DtAnim3 extends ToolAnimationG2 {
+
+    //Enum
+    public mat m;
+
+
+    /**
+     * Init Vessels.
+     */
+    public void initVessels() {
+	DtArrowVessel("arrow", active=true, owner=this);
+	DtSelectionBoundVessel("selectionBound", active=false, owner=this);
+    }
+
+
+    /**
+     * Mouse release (click).
+     */
+    public void release() {
+	if (candidate as Cabinet1) {
+	    candidate.m = m;
+	    candidate.invalidate(dirty2D.rebuild, dirty3D.all);
+	}
+    }
+
+
+    /**
+     * props
+     */
+    public props {
+	"m" : domain=EnumSubSet(mat),
+	  setting=PropInputSetting(label="Material",
+				   attributes={#quick, #drag, #insert, #lockable},
+				   args=props{list=true});
+    }
+
+
+    /**
+     * Prop changed.
+     */
+    public void propChanged(str k, Object v, Object old, Object env=null) {
+	super(..);
+
+	if (k == "m")
+	  m = v.Mat.v;
+
+    }
+}
+
+
+/**
+ * Vessel to draw arrow at animation position.
+ */
+public class DtArrowVessel extends Vessel {
+
+    /**
+     * Update. Calculate position based on if a 'candidate' is found.
+     */
+    public bool update() {
+	point oldPos = pos;
+
+	if (?Snapper candidate = owner.get("candidate"))
+	  pos = frontCenter(candidate.bound);
+	else
+	  pos = owner.pos;
+
+	return oldPos != pos;
+    }
+
+
+    /**
+     * Get 3D 
+     */
+    public Primitive3D get3D(FetchEnv3D env) {
+	Arrow3D res((0feet, -1feet, 0feet), (0feet, -0.1feet, 0feet), 1inch);
+	res.setMaterial(intenseBlueMaterial3D);
+	res.move(pos);
+	return res;
+    }
+
+
+    /**
+     * Get 2D
+     */
+    public GInstance get2D() {
+
+	GInstance square();
+	rect squareA = rect((-1inch, -1inch), (1inch, 1inch));
+	Graph graph = GRect(squareA, fillColor=blue);
+	graph.move(pos);
+
+	square <<? graph;
+
+	return square;
+
+    }
+    
+}
+
+
+/**
+ * Vessel to display bounds of selection.
+ */
+public class DtSelectionBoundVessel extends Vessel {
+
+    /**
+     * The bound of the selection.
+     */
+    public box bound;
+
+
+    /**
+     * Owner event.
+     */
+    public void ownerEvent(str eventKey=null, Object eventEnv=null,
+			   OwnerEventVisitor visitor=null) {
+	super(..);
+
+	if (eventKey == "candidateChanged") {
+	    ?Snapper candidate = owner.get("candidate");
+
+	    if (candidate)
+	      updateSelectionBound(candidate);
+
+	    setActive(candidate != null);
+	}
+    }
+
+
+    /**
+     * Update selection bound.
+     */
+    extend public void updateSelectionBound(Snapper candidate) {
+	SnapperSelection selection(candidate, candidate.allConnected);
+	bound = selection.bound();
+	bound.grow(1inch);
+    }
+
+
+    /**
+     * Get 3D.
+     */
+    public Primitive3D get3D(FetchEnv3D env) {
+	if (bound.volume > 0) {
+	    Primitive3D res = frameBox3D(bound.grown(2inch), 1inch);
+	    res.setMaterial(intenseBlueMaterial3D);
+	    return res;
+	}
+
+	return invisiblePrimitive3D;
+    }
+
+
+    /**
+     * Get 2D. 
+     */
+    public GInstance get2D() {
+
+	GInstance square();
+	rect squareA = rect(bound.grown(1inch));
+	Graph graph = GRect(squareA, fillColor=blue);
+	graph.move(pos);
+
+	square <<? graph;
+	
+	return square;
+    }
+}
+
+
+/**
+ * Calculate the front center point of a box.
+ */
+public point frontCenter(box b) {
+    return line(b.downSouthwest, b.upSoutheast).midPoint;
+}
+
+public class InterfStretchAnimationG2 extends StretchAnimationG2 {
+
+}
+
+
+/*
+public class DtSurfaceGrainAnimationEx2 extends ToolAnimationG2 
+
+
+/**
+ * Align grain of selected group.
+ */
+public class DtAlignGrainAnimationEx2 extends ToolAnimationG2 {
+
+    /**
+     * Selected snappers.
+     */
+    public SnapperSelection selection;
+
+
+    /**
+     * Props.
+     */
+    public props {
+	"selection";
+    }
+
+
+    /**
+     * Initialize vessels.
+     */
+    public void initVessels() {
+	DtGrainDirectionVessel("grainDirection", owner=this, active=true);
+    }
+
+
+    /**
+     * Search for snapper candidates?
+     */
+    public bool candidateSearch() { return false; }
+
+
+    /**
+     * Mouse release (click).
+     */
+    public void release() {
+	endAnimation();
+    }
+
+}
+
+
+/**
+ * Vessel to draw arrow at animation position.
+ */
+public class DtArrowVessel extends Vessel {
+
+    /**
+     * Update. Calculate position based on if a 'candidate' is found.
+     */
+    public bool update() {
+	point oldPos = pos;
+
+	if (?Snapper candidate = owner.get("candidate"))
+	  pos = topCenter(candidate.bound);
+	else
+	  pos = owner.pos;
+
+	return oldPos != pos;
+    }
+
+    /**
+     * Get 3D.
+     */
+    public Primitive3D get3D(FetchEnv3D env) {
+	Arrow3D res((0feet, 0feet, 1feet), (0feet, 0feet, 0feet), 1inch);
+	res.setMaterial(intenseBlueMaterial3D);
+	res.move(pos);
+	return res;
+    }
+}
+
+
+/**
+ * Vessel to display bounds of selection.
+ */
+public class DtSelectionBoundVessel extends Vessel {
+
+    /**
+     * The bound of the selection.
+     */
+    public box bound;
+
+
+    /**
+     * Owner event.
+     */
+    public void ownerEvent(str eventKey=null, Object eventEnv=null,
+			   OwnerEventVisitor visitor=null) {
+	super(..);
+
+	if (eventKey == "candidateChanged") {
+	    ?Snapper candidate = owner.get("candidate");
+
+	    if (candidate)
+	      updateSelectionBound(candidate);
+
+	    setActive(candidate != null);
+	}
+    }
+
+
+    /**
+     * Update selection bound.
+     */
+    extend public void updateSelectionBound(Snapper candidate) {
+	SnapperSelection selection(candidate, candidate.allConnected);
+	bound = selection.bound();
+	bound.grow(1inch);
+    }
+
+
+    /**
+     * Get 3D.
+     */
+    public Primitive3D get3D(FetchEnv3D env) {
+	if (bound.volume > 0) {
+	    Primitive3D res = frameBox3D(bound.grown(1inch), 40mm);
+	    res.setMaterial(intenseBlueMaterial3D);
+	    return res;
+	}
+
+	return invisiblePrimitive3D;
+    }
+
+}
+
+/***************************************************************************
+ * Test
+ ***************************************************************************/
+
+if (developMode) {
+    // This code will start the animation above.
+    DtSurfaceGrainAnimationEx2 anim();
+    animate(anim);
+}
+*/
